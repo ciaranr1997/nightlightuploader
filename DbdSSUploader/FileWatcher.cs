@@ -28,60 +28,66 @@ namespace DbdSSUploader
 
            
             watcher.Created += OnCreated;
-           
 
-            
-           
             watcher.EnableRaisingEvents = true;
 
-            Console.WriteLine("Press enter to exit.");
             Console.ReadLine();
         }
 
-       
+        /// <summary>
+        /// Listens for when a new image is created in the specified folder
+        /// </summary>
+        /// <param name="sender"> The event that triggered this</param>
+        /// <param name="e">The newly created file</param>
         private static void OnCreated(object sender, FileSystemEventArgs e)
         {
+            
             string value = $"Created: {e.FullPath}";
             UploadImg(e.FullPath);
         }
-        
+
+        /// <summary>
+        /// Convert the image file into bytes and send it to the nightlight api
+        /// </summary>
+        /// <param name="Img"></param>
         public static async void UploadImg(String Img) 
         {
-            using (var httpClient = new HttpClient())
+            //Create http client
+            using var httpClient = new HttpClient();
+            //Open the image and convert it into bytes
+            byte[] image = System.IO.File.ReadAllBytes(Img);
+            httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + ConfigurationManager.AppSettings["api_key"]);
+            MultipartFormDataContent form = new MultipartFormDataContent();
+            string filename = Img.Replace(ConfigurationManager.AppSettings["default_location"], "");
+            ByteArrayContent byteContent = new ByteArrayContent(image);
+            form.Add(byteContent, "file", filename);
+            Console.WriteLine(form.ToString());
+            HttpResponseMessage response = await httpClient.PostAsync("https://api.nightlight.gg/v1/upload", form);
+
+            response.EnsureSuccessStatusCode();
+
+            Task<string> responseBody = response.Content.ReadAsStringAsync();
+            responseBody.Wait();
+            var bdy = responseBody.Result.ToString();
+            dynamic data = JObject.Parse(bdy);
+            string url = data.data.url;
+            
+            Console.WriteLine(url);
+            //open the URL
+            System.Diagnostics.Process.Start(new ProcessStartInfo
             {
-                byte[] image = System.IO.File.ReadAllBytes(Img);
-                httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer "+ ConfigurationManager.AppSettings["api_key"]);
-                MultipartFormDataContent form = new MultipartFormDataContent();
-                String filename = Img.Replace(ConfigurationManager.AppSettings["default_location"], "");
-                ByteArrayContent byteContent = new ByteArrayContent(image);
-                form.Add(byteContent, "file", filename);
-                Console.WriteLine(form.ToString());
-                HttpResponseMessage response = await httpClient.PostAsync("https://api.nightlight.gg/v1/upload", form);
+                FileName = url,
+                UseShellExecute = true
+            });
 
-                response.EnsureSuccessStatusCode();
-
-                Task<string> responseBody = response.Content.ReadAsStringAsync();
-                responseBody.Wait();
-                var bdy = responseBody.Result.ToString();
-                dynamic data = JObject.Parse(bdy);
-                String url = data.data.url;
-                Console.WriteLine(response.StatusCode.ToString());
-                Console.WriteLine(url);
-                System.Diagnostics.Process.Start(new ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                });
-                
-                if (response.StatusCode.ToString() != "OK")
-                {
-                    //return "ERROR: " + response.StatusCode.ToString();
-                }
-                else
-                {
-                    File.Delete(Img);
-                    //return "SUCCES: " + responseBody.Result.ToString();
-                }
+            if (response.StatusCode.ToString() != "OK")
+            {
+                //return "ERROR: " + response.StatusCode.ToString();
+            }
+            else
+            {
+                File.Delete(Img);
+                //return "SUCCES: " + responseBody.Result.ToString();
             }
         }
         private static void PrintException(Exception? ex)
