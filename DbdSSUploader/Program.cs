@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Forms;
 
 namespace DbdSSUploader
 {
@@ -7,8 +8,11 @@ namespace DbdSSUploader
         static void Main(string[] args)
         {
             Console.WriteLine("Starting!");
-            FileWatcher FileW = new FileWatcher();
-            while(true);
+            MainForm form = new MainForm();
+            form.Show();
+            
+            Application.Run();
+
         }
     }
 }
