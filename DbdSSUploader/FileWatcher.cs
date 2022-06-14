@@ -16,9 +16,11 @@ namespace DbdSSUploader
     {
         FileSystemWatcher watcher = new FileSystemWatcher(ConfigurationManager.AppSettings["default_location"]);
         ListBox currentSession;
-        public FileWatcher(ListBox sessionLb)
+        MainForm mainForm;
+        public FileWatcher(ListBox sessionLb,MainForm mainForm_)
         {
             currentSession = sessionLb;
+            mainForm = mainForm_;
             watcher.NotifyFilter = NotifyFilters.Attributes
                                  | NotifyFilters.CreationTime
                                  | NotifyFilters.DirectoryName
@@ -48,12 +50,20 @@ namespace DbdSSUploader
         {
             
             string value = $"Created: {e.FullPath}";
-
             currentSession.Invoke((MethodInvoker)delegate {
                 // Running on the UI thread
                 currentSession.Items.Add(e.Name);
             });
-            UploadImg(e.FullPath);
+
+            // Running on the UI thread
+            mainForm.updateLbl("Found new image "+e.Name);
+            bool isScore = ImageHandle.isScoreboard(e.FullPath);
+
+            if (isScore) 
+            {
+                UploadImg(e.FullPath);
+            }
+            
         }
 
         /// <summary>
@@ -98,7 +108,6 @@ namespace DbdSSUploader
                 }
                 else
                 {
-                    File.Delete(Img);
                     //return "SUCCES: " + responseBody.Result.ToString();
                 }
             }

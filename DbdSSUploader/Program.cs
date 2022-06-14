@@ -5,6 +5,7 @@ namespace DbdSSUploader
 {
     class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
             Console.WriteLine("Starting!");
